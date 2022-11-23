@@ -17,16 +17,24 @@ if (isset($_POST['submit']) && !empty($_SESSION['token'])) {
     $password = filter_input(INPUT_POST, 'password', FILTER_UNSAFE_RAW);
 
     if (!empty($name) && !empty($email) && !empty($password)) {
+        // try {
         $conn = new Database();
+        // }
+        // catch () {
+        //     // ...
+        // }
+
+        $hash = password_hash($password, PASSWORD_DEFAULT);
+
         $result = $conn->dbQuery(
             "INSERT INTO users (`id`, `name`, `email`, `password`) VALUES(NULL,?,?,?)",
-            [$name, $email, $password]
+            [$name, $email, $hash]
         );
 
-        // todo: test condition
-        var_dump($conn->get('affected'));
         if ($conn->get('affected') > 0) {
             header('location: login.php');
+        } else {
+            $message = "Error. Check your input...";
         }
     } else {
         $message = "All fields are required";

@@ -22,7 +22,7 @@ class Database
 
     public function dbQuery($sql, $params = [])
     {
-        $affected = 0;
+        $this->affected = 0;
 
         if (!isset($db) || empty($db)) {
             $this->connect();
@@ -32,7 +32,7 @@ class Database
             $query = $this->db->prepare($sql);
             $query->execute($params);
             $result = $query->fetchAll(PDO::FETCH_OBJ);
-            $affected = $query->rowCount();
+            $this->affected = $query->rowCount();
         } catch (PDOException $err) {
             echo "Error: {$err->getMessage()}";
         }

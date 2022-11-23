@@ -5,9 +5,14 @@ require_once './providers/database.php';
 use Mwu\Pdo\Database;
 
 session_start();
+
 $_SESSION['token'] = sha1('Aa$124$!re');
 
 $message = '';
+
+if (isset($_SESSION['userId'])) {
+    unset($_SESSION['userId']);
+}
 
 if (isset($_POST['submit']) && !empty($_SESSION['token'])) {
 
@@ -17,11 +22,21 @@ if (isset($_POST['submit']) && !empty($_SESSION['token'])) {
     if (!empty($email) && !empty($password)) {
         $conn = new Database();
         $result = $conn->dbQuery(
-            "SELECT * FROM users WHERE email=? AND password=?",
-            [$email, $password]
+            "SELECT * FROM users WHERE email=?",
+            [$email]
         );
 
         if (count($result) > 0) {
+            $row = $result[0];
+
+            if (!password_verify($password, $row->password)) {
+                $message = "Failed to login, check password";
+                return;
+            }
+
+            $_SESSION['userId'] = $row->id;
+            $_SESSION['userName'] = $row->name;
+
             header('location: profile.php');
         } else {
             $message = "Failed to login, check email and password";
