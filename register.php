@@ -9,6 +9,11 @@ session_start();
 $_SESSION['token'] = sha1('Aa$124$!re');
 
 $message = '';
+$file_err = '';
+
+define('UPLOAD_MAX_SIZE', 1024 * 1024 * 2);
+$ext = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+$upload_dir = dirname('upload');
 
 if (isset($_POST['submit']) && !empty($_SESSION['token'])) {
 
@@ -17,13 +22,35 @@ if (isset($_POST['submit']) && !empty($_SESSION['token'])) {
     $password = filter_input(INPUT_POST, 'password', FILTER_UNSAFE_RAW);
 
     if (!empty($name) && !empty($email) && !empty($password)) {
-        // try {
-        $conn = new Database();
-        // }
-        // catch () {
-        //     // ...
-        // }
 
+        // image upload
+        if (!empty($_POST['image']) && $_FILES['image']['error'] == UPLOAD_ERR_OK) {
+            if (is_uploaded_file($_FILES['image']['tmp_name'])) {
+
+                if ($_FILES['image']['size'] <= UPLOAD_MAX_SIZE) {
+
+                    $file_info = pathinfo($_FILES['image']['name']);
+                    $file_ext = strtolower($file_info['extension']);
+
+                    if (in_array($file_ext, $ext)) {
+                        print_r("$upload_dir/$file_name");
+
+                        $file_err = '';
+                        $file_name = date('Y.m.d.H.i.s') . '-' . basename($_FILES['image']['name']);
+                        move_uploaded_file(
+                            $_FILES['image']['tmp_name'],
+                            "$upload_dir/$file_name"
+                        );
+                        echo '<p>File is upload</p>';
+                    }
+                }
+            }
+        } elseif ($_FILES['image']['error'] != UPLOAD_ERR_OK) {
+            $file_err = 'Error uploading file';
+        }
+
+
+        $conn = new Database();
         $hash = password_hash($password, PASSWORD_DEFAULT);
 
         $result = $conn->dbQuery(
@@ -32,7 +59,7 @@ if (isset($_POST['submit']) && !empty($_SESSION['token'])) {
         );
 
         if ($conn->get('affected') > 0) {
-            header('location: login.php');
+            // header('location: login.php');
         } else {
             $message = "Error. Check your input...";
         }
@@ -61,11 +88,18 @@ include_once './inc/header.php';
             <label for="password" class="form-label">Password</label>
             <input type="password" class="form-control" id="password" name="password">
         </div>
+        <div class="mb-3">
+            <label for="image" class="form-label">Image</label>
+            <input type="file" class="form-control" id="image" name="image">
+        </div>
         <input type="hidden" name="token" value="<?= $_SESSION['token'] ?>">
 
         <input type="submit" name="submit" value="Sign Up" class="btn btn-primary">
 
-        <div class="text-danger"><?= $message ?></div>
+        <div class="text-danger">
+            <p><?= $message ?></p>
+            <p><?= $file_err ?></p>
+        </div>
     </form>
 </main>
 
