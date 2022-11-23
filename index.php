@@ -12,7 +12,7 @@ include_once './inc/header.php';
     </h5>
 
     <p>
-        <img src="https://cdn.pixabay.com/photo/2016/06/12/13/48/ghettoblaster-1452077__340.jpg" alt="Music With Us">
+        <img class="img-fluid" src="https://cdn.pixabay.com/photo/2016/06/12/13/48/ghettoblaster-1452077__340.jpg" alt="Music With Us">
     </p>
 </main>
 
