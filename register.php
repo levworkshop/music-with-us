@@ -9,11 +9,10 @@ session_start();
 $_SESSION['token'] = sha1('Aa$124$!re');
 
 $message = '';
-$file_err = '';
 
 define('UPLOAD_MAX_SIZE', 1024 * 1024 * 2);
 $ext = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-$upload_dir = dirname('upload');
+$upload_dir = __DIR__ . "/upload/";
 
 if (isset($_POST['submit']) && !empty($_SESSION['token'])) {
 
@@ -21,50 +20,60 @@ if (isset($_POST['submit']) && !empty($_SESSION['token'])) {
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
     $password = filter_input(INPUT_POST, 'password', FILTER_UNSAFE_RAW);
 
-    if (!empty($name) && !empty($email) && !empty($password)) {
+    try {
+        if (empty($name) || empty($email) || empty($password)) {
+            throw new Exception("All fields are required");
+        }
 
-        // image upload
-        if (!empty($_POST['image']) && $_FILES['image']['error'] == UPLOAD_ERR_OK) {
-            if (is_uploaded_file($_FILES['image']['tmp_name'])) {
+        if (
+            empty($_FILES['image']) ||
+            $_FILES['image']['error'] !== UPLOAD_ERR_OK
+        ) {
+            throw new Exception("Error uploading file.<br>{$_FILES['image']['error']}");
+        }
 
-                if ($_FILES['image']['size'] <= UPLOAD_MAX_SIZE) {
+        $tmp_name = $_FILES['image']['tmp_name'];
 
-                    $file_info = pathinfo($_FILES['image']['name']);
-                    $file_ext = strtolower($file_info['extension']);
+        if (is_uploaded_file($tmp_name)) {
 
-                    if (in_array($file_ext, $ext)) {
-                        print_r("$upload_dir/$file_name");
-
-                        $file_err = '';
-                        $file_name = date('Y.m.d.H.i.s') . '-' . basename($_FILES['image']['name']);
-                        move_uploaded_file(
-                            $_FILES['image']['tmp_name'],
-                            "$upload_dir/$file_name"
-                        );
-                        echo '<p>File is upload</p>';
-                    }
-                }
+            if ($_FILES['image']['size'] > UPLOAD_MAX_SIZE) {
+                throw new Exception("File is too large.");
             }
-        } elseif ($_FILES['image']['error'] != UPLOAD_ERR_OK) {
-            $file_err = 'Error uploading file';
+
+            $file_info = pathinfo($_FILES['image']['name']);
+            $file_ext = strtolower($file_info['extension']);
+
+            if (!in_array($file_ext, $ext)) {
+                throw new Exception("Only files of type: 'jpg', 'jpeg', 'png', 'gif', 'webp' are allowed");
+            }
+
+            $upload_file = $upload_dir . date('Y.m.d.H.i.s') . '-' . basename($_FILES['image']['name']);
+
+            if (
+                move_uploaded_file(
+                    $_FILES['image']['tmp_name'],
+                    $upload_file
+                )
+            ) {
+                $conn = new Database();
+                $hash = password_hash($password, PASSWORD_DEFAULT);
+
+                $result = $conn->dbQuery(
+                    "INSERT INTO users (`id`, `name`, `email`, `password`) VALUES(NULL,?,?,?)",
+                    [$name, $email, $hash]
+                );
+
+                if ($conn->get('affected') > 0) {
+                    header('location: login.php');
+                } else {
+                    throw new Exception("Error. Check your input...");
+                }
+            } else {
+                throw new Exception("Upload failed. check permission of upload folder");
+            }
         }
-
-
-        $conn = new Database();
-        $hash = password_hash($password, PASSWORD_DEFAULT);
-
-        $result = $conn->dbQuery(
-            "INSERT INTO users (`id`, `name`, `email`, `password`) VALUES(NULL,?,?,?)",
-            [$name, $email, $hash]
-        );
-
-        if ($conn->get('affected') > 0) {
-            // header('location: login.php');
-        } else {
-            $message = "Error. Check your input...";
-        }
-    } else {
-        $message = "All fields are required";
+    } catch (Exception $err) {
+        $message = $err->getMessage();
     }
 }
 
@@ -75,7 +84,7 @@ include_once './inc/header.php';
 <main>
     <h2 class="my-3 text-center">Register</h2>
 
-    <form action="register.php" method="POST" accept-charset="UTF-8" class="p-4 mx-auto form">
+    <form action="register.php" method="POST" enctype="multipart/form-data" class="p-4 mx-auto form">
         <div class="mb-3">
             <label for="name" class="form-label">Name</label>
             <input type="text" class="form-control" id="name" name="name">
@@ -98,7 +107,6 @@ include_once './inc/header.php';
 
         <div class="text-danger">
             <p><?= $message ?></p>
-            <p><?= $file_err ?></p>
         </div>
     </form>
 </main>
