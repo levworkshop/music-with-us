@@ -69,7 +69,7 @@ if (isset($_POST['submit']) && !empty($_SESSION['token'])) {
                     throw new Exception("Error. Check your input...");
                 }
             } else {
-                throw new Exception("Upload failed. check permission of upload folder");
+                throw new Exception("Upload failed. check permission and path of upload folder");
             }
         }
     } catch (Exception $err) {
